@@ -1,0 +1,4 @@
+# all cache files 
+/__pycache__**/
+.venv/
+.env*
