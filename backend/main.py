@@ -1,18 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os 
-import dotenv
 import logging
 
 from dotenv import load_dotenv
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
 
 # Import the connectors you created
 from connectors import SyncEngine, GoogleSheetsConnector, AirtableConnector
+from ai_agent import IntegrationAI
+
+
+# Initialize AI agent
+ai_agent = IntegrationAI()
 
 app = FastAPI(title="IntegrateAI API")
 
@@ -80,35 +85,24 @@ integrations_db = [
 def root():
     return {"message": "IntegrateAI API is running"}
 
+
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    """AI chat endpoint"""
-    user_msg = request.message.lower()
+    """AI chat endpoint with Gemini"""
+    try:
+        result = ai_agent.chat(request.message)
+    except Exception as e:
+        logging.exception("/chat failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Chat provider error: {str(e)}")
     
-    if "google" in user_msg or "sheet" in user_msg or "connect" in user_msg:
-        return ChatResponse(
-            response="I'll help you connect to Google Sheets. First, I need you to authenticate with your account.",
-            actions=[
-                Action(label="Connect to Google Sheets", action="auth_sheets"),
-                Action(label="Connect to Airtable", action="auth_airtable"),
-            ]
-        )
-    elif "sync" in user_msg or "integration" in user_msg:
-        return ChatResponse(
-            response="I can see you have 1 active integration. Which one would you like to manage?",
-            actions=[
-                Action(label="Google Sheets → Airtable", action="view_integration_1"),
-            ]
-        )
-    else:
-        return ChatResponse(
-            response="I understand you want to set up an integration. I can help you connect Google Sheets, Airtable, or databases. Which system would you like to connect as your source?",
-            actions=[
-                Action(label="Google Sheets", action="select_sheets"),
-                Action(label="Airtable", action="select_airtable"),
-                Action(label="Database", action="select_database"),
-            ]
-        )
+    return ChatResponse(
+        response=result["response"],
+        actions=[Action(label=a["label"], action=a["action"]) for a in result.get("actions", [])]
+    )
+
+
 
 @app.get("/integrations")
 def get_integrations():

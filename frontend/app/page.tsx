@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Sidebar from "../components/Sidebar";
 
 import Message from "../types/Message";
-import StreamingText from "../components/StreamingText";
 
 
 
@@ -78,6 +79,10 @@ export default function ChatPage() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        const detail = typeof data?.detail === "string" ? data.detail : "Backend request failed";
+        throw new Error(detail);
+      }
 
       setStreamingMessageId(null);
       setMessages((prev) =>
@@ -93,6 +98,7 @@ export default function ChatPage() {
         )
       );
     } catch (error) {
+      console.error("Chat request failed:", error);
       setStreamingMessageId(null);
       setMessages((prev) =>
         prev.map((m) =>
@@ -125,8 +131,17 @@ export default function ChatPage() {
   };
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    sendToBackend(input);
+    const trimmedInput = input.trim();
+    if (!trimmedInput) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: trimmedInput,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    sendToBackend(trimmedInput);
     setInput("");
   };
 
@@ -168,13 +183,30 @@ export default function ChatPage() {
                         : "bg-white"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">
-                      {message.role === "assistant" && message.isStreaming ? (
-                        <StreamingText text={message.content} speed={20} />
+                    <div className="text-sm leading-relaxed">
+                      {message.role === "assistant" && message.isStreaming && !message.content ? (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Gemini is thinking...</span>
+                        </div>
+                      ) : message.role === "assistant" ? (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                            ul: ({ ...props }) => <ul className="list-disc space-y-1 pl-5" {...props} />,
+                            ol: ({ ...props }) => <ol className="list-decimal space-y-1 pl-5" {...props} />,
+                            code: ({ ...props }) => (
+                              <code className="rounded bg-gray-100 px-1 py-0.5 text-xs" {...props} />
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
                       ) : (
-                        message.content
+                        <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
-                    </p>
+                    </div>
                   </Card>
                   {message.actions && message.actions.length > 0 && !message.isStreaming && (
                     <div className="mt-3 flex flex-wrap gap-2">
