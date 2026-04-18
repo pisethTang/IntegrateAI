@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, RefreshCw, Settings, FileText } from "lucide-react";
 import {
+  // BarChart,
   LineChart,
   Line,
   XAxis,
@@ -26,28 +27,28 @@ import {
 } from "recharts";
 
 // Mock data
-const integrations = [
-  {
-    id: "1",
-    name: "Smartsheet → Airtable",
-    source: "Projects",
-    target: "Active Projects",
-    status: "active",
-    lastSync: "2 min ago",
-    nextSync: "58 min",
-    syncCount: 128,
-  },
-  {
-    id: "2",
-    name: "PostgreSQL → S3",
-    source: "analytics",
-    target: "s3://integrateai-bucket/",
-    status: "paused",
-    lastSync: "1 hour ago",
-    nextSync: "23 hours",
-    syncCount: 45,
-  },
-];
+// const integrations = [
+//   {
+//     id: "1",
+//     name: "Smartsheet → Airtable",
+//     source: "Projects",
+//     target: "Active Projects",
+//     status: "active",
+//     lastSync: "2 min ago",
+//     nextSync: "58 min",
+//     syncCount: 128,
+//   },
+//   {
+//     id: "2",
+//     name: "PostgreSQL → S3",
+//     source: "analytics",
+//     target: "s3://integrateai-bucket/",
+//     status: "paused",
+//     lastSync: "1 hour ago",
+//     nextSync: "23 hours",
+//     syncCount: 45,
+//   },
+// ];
 
 const syncData = [
   { day: "Mon", syncs: 12 },
@@ -65,11 +66,11 @@ const apiUsage = [
   { name: "PostgreSQL", used: 1200, limit: 10000 },
 ];
 
-const recentSyncs = [
-  { id: "1", integration: "Smartsheet → Airtable", time: "2 min ago", rows: 45, status: "success" },
-  { id: "2", integration: "PostgreSQL → S3", time: "1 hour ago", size: "1.2 MB", status: "success" },
-  { id: "3", integration: "Smartsheet → Airtable", time: "3 hours ago", rows: 23, status: "error" },
-];
+// const recentSyncs = [
+//   { id: "1", integration: "Smartsheet → Airtable", time: "2 min ago", rows: 45, status: "success" },
+//   { id: "2", integration: "PostgreSQL → S3", time: "1 hour ago", size: "1.2 MB", status: "success" },
+//   { id: "3", integration: "Smartsheet → Airtable", time: "3 hours ago", rows: 23, status: "error" },
+// ];
 
 
 
@@ -83,10 +84,56 @@ const API_URL = "http://localhost:8000";
 export default function DashboardPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentSyncs, setRecentSyncs] = useState([]);
+
+
+  const [metrics, setMetrics] = useState({
+    total_syncs: 0,
+    wasted_syncs: 0,
+    efficiency: 0,
+    sync_history: []
+  });
 
   useEffect(() => {
     fetchIntegrations();
+    fetchMetrics();
+    fetchSyncHistory();
   }, []);
+
+
+  const fetchMetrics = async () => {
+    try {
+      const response = await fetch(`${API_URL}/metrics/efficiency`);
+      const data = await response.json();
+      setMetrics(data);
+    } catch (error) {
+      console.error("Failed to fetch metrics:", error);
+    }
+  };
+
+  const fetchSyncHistory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/metrics/sync-history`);
+      const data = await response.json();
+      setRecentSyncs(data.metrics || []);
+    } catch (error) {
+      console.error("Failed to fetch sync history:", error);
+    }
+  };
+
+  const triggerSync = async (integrationId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/sync/${integrationId}/trigger`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      alert(`Sync complete: ${data.rows_written} rows written`);
+      fetchMetrics();
+      fetchSyncHistory();
+    } catch (error) {
+      alert("Failed to trigger sync");
+    }
+  };
 
   const fetchIntegrations = async () => {
     try {
@@ -100,19 +147,18 @@ export default function DashboardPage() {
     }
   };
 
-  const triggerSync = async (integrationId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/sync/${integrationId}/trigger`, {
-        method: "POST",
-      });
-      const data = await response.json();
-      alert(data.message);
-      // Refresh integrations
-      fetchIntegrations();
-    } catch (error) {
-      alert("Failed to trigger sync");
+
+  // testing: run 5 syncs in a row to see efficiency impact
+  const runTestSyncs = async () => {
+    for (let i = 0; i < 5; i++) {
+      await fetch(`${API_URL}/sync/1/trigger`, { method: "POST" });
+      await new Promise(r => setTimeout(r, 300));
     }
+    fetchMetrics();
+    fetchSyncHistory();
+    alert("5 test syncs completed!");
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,6 +174,7 @@ export default function DashboardPage() {
 
       <main className="p-6">
         <div className="mx-auto max-w-6xl space-y-6">
+          {/* Integrations */}
           <section>
             <h2 className="mb-4 text-lg font-semibold">Active Integrations</h2>
             {loading ? (
@@ -139,9 +186,7 @@ export default function DashboardPage() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base">{integration.name}</CardTitle>
-                        <Badge
-                          variant={integration.status === "active" ? "default" : "secondary"}
-                        >
+                        <Badge variant={integration.status === "active" ? "default" : "secondary"}>
                           {integration.status}
                         </Badge>
                       </div>
@@ -156,11 +201,7 @@ export default function DashboardPage() {
                         <p>Total syncs: {integration.syncCount}</p>
                       </div>
                       <div className="mt-4 flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => triggerSync(integration.id)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => triggerSync(integration.id)}>
                           <RefreshCw className="mr-1 h-3 w-3" />
                           Sync Now
                         </Button>
@@ -179,7 +220,9 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          {/* Charts Row */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Sync Activity */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Sync Activity (7 days)</CardTitle>
@@ -197,6 +240,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
+            {/* API Usage */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">API Usage</CardTitle>
@@ -213,8 +257,41 @@ export default function DashboardPage() {
                 ))}
               </CardContent>
             </Card>
+
+            {/* NEW: Sync Efficiency */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Sync Efficiency</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Total Syncs</span>
+                  <span className="font-semibold">{metrics.total_syncs}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Wasted Syncs</span>
+                  <span className="font-semibold text-red-500">{metrics.wasted_syncs}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Efficiency</span>
+                  <span className={`font-semibold ${metrics.efficiency >= 70 ? 'text-green-500' : 'text-yellow-500'}`}>
+                    {metrics.efficiency.toFixed(1)}%
+                  </span>
+                </div>
+                <Progress value={metrics.efficiency} className="h-2" />
+                <div className="flex gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={runTestSyncs}>
+                    Run 5 Test Syncs
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    Train RL Agent
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
+          {/* Recent Syncs */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Recent Syncs</CardTitle>
@@ -225,23 +302,31 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>Integration</TableHead>
                     <TableHead>Time</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Rows</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentSyncs.map((sync) => (
-                    <TableRow key={sync.id}>
-                      <TableCell>{sync.integration}</TableCell>
-                      <TableCell>{sync.time}</TableCell>
-                      <TableCell>{sync.rows ? `${sync.rows} rows` : sync.size}</TableCell>
-                      <TableCell>
-                        <Badge variant={sync.status === "success" ? "default" : "destructive"}>
-                          {sync.status}
-                        </Badge>
+                  {recentSyncs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-gray-500">
+                        No syncs yet. Click "Sync Now" or "Run 5 Test Syncs"
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    recentSyncs.map((sync: any, idx: number) => (
+                      <TableRow key={idx}>
+                        <TableCell>{sync.integration_id || "Google Sheets → Airtable"}</TableCell>
+                        <TableCell>{new Date(sync.timestamp).toLocaleString()}</TableCell>
+                        <TableCell>{sync.rows_written}</TableCell>
+                        <TableCell>
+                          <Badge variant={sync.rows_written > 0 ? "default" : "secondary"}>
+                            {sync.rows_written > 0 ? "Success" : "No data"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -250,4 +335,5 @@ export default function DashboardPage() {
       </main>
     </div>
   );
+
 }
