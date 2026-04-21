@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "IntegrateAI",
   description: "AI-powered integration assistant for Smartsheet and Airtable",
+  icons: {
+    icon: "https://cdn3d.iconscout.com/3d/premium/thumb/random-shapes-3d-icon-png-download-11568277.png",
+  },
 };
 
 export default function RootLayout({

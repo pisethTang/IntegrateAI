@@ -3,14 +3,25 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 from datetime import datetime
+from dotenv import load_dotenv
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://seth:your_password@localhost:5432/integrateai")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set. Configure it in backend/.env")
+
+if "your_password" in DATABASE_URL or "choose_a_strong_password" in DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL contains a placeholder password. Set a real postgres password in backend/.env"
+    )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class Integration(Base):
+class Integration(Base): 
     __tablename__ = "integrations"
     
     id = Column(String, primary_key=True)
@@ -41,9 +52,6 @@ class SyncHash(Base):
     integration_id = Column(String, primary_key=True)
     last_hash = Column(String)
     updated_at = Column(DateTime, default=datetime.utcnow)
-
-# Create tables
-Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()

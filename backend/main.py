@@ -11,9 +11,13 @@ from datetime import datetime
 import json
 import random
 
+from contextlib import asynccontextmanager
 
+
+
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from models import get_db, Integration, SyncLog, SyncHash, engine, Base
+from models import SessionLocal, get_db, Integration, SyncLog, SyncHash, engine, Base
 from fastapi import Depends
 
 
@@ -49,74 +53,161 @@ ai_agent = IntegrationAI()
 
 
 # Store sync metrics (in production, use database)
-sync_metrics = []
+# sync_metrics = []
 
 
 
 
 
 
-app = FastAPI(title="IntegrateAI API")
+
+
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+
+def get_db_session():
+    return SessionLocal()
+
+
+
+# Create tables on startup
+# @app.on_event("startup")
+# def startup():
+    # Base.metadata.create_all(bind=engine)
+    
+    # # Seed default integration if none exists
+    # db = get_db_session()
+    # existing = db.query(Integration).filter(Integration.id == "1").first()
+    # if not existing:
+    #     default = Integration(
+    #         id="1",
+    #         name="Google Sheets → Airtable",
+    #         source_type="google_sheets",
+    #         source_config={
+    #             "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
+    #             "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",
+    #             "range": "Sheet1"
+    #         },
+    #         target_type="airtable",
+    #         target_config={
+    #             "api_key": os.getenv("AIRTABLE_API_KEY"),
+    #             "base_id": "appD0lElNLFW3IMTu",
+    #             "table": "Projects"
+    #         },
+    #         field_mapping={"Name": "Name", "Status": "Status", "Due Date": "Deadline"}
+    #     )
+    #     db.add(default)
+    #     db.commit()
+    # db.close()
+########################################################################################
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup code
+    Base.metadata.create_all(bind=engine)
+    
+    # Seed default integration
+    db = SessionLocal()
+    existing = db.query(Integration).filter(Integration.id == "1").first()
+    if not existing:
+        default = Integration(
+            id="1",
+            name="Google Sheets → Airtable",
+            source_type="google_sheets",
+            source_config={
+                "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
+                "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",
+                "range": "Sheet1"
+            },
+            target_type="airtable",
+            target_config={
+                "api_key": os.getenv("AIRTABLE_API_KEY"),
+                "base_id": "appD0lElNLFW3IMTu",
+                "table": "Projects"
+            },
+            field_mapping={"Name": "Name", "Status": "Status", "Due Date": "Deadline"}
+        )
+        db.add(default)
+        db.commit()
+    db.close()
+    
+    yield  # App runs here
+    
+    # Shutdown code (optional)
+    print("Shutting down...")
+
+
+app = FastAPI(title="IntegrateAI API", lifespan=lifespan) # lifespan allows us to run startup code before the app starts accepting requests
 
 # Allow frontend to connect
 app.add_middleware(
     CORSMiddleware,
+
+
     allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request/Response models
-class ChatRequest(BaseModel):
-    message: str
+# Import types Request/Response models
+# from backend.types.ChatRequest import ChatRequest
+# from backend.types.ChatResponse import ChatResponse
+# from backend.types.Action import Action
 
 class Action(BaseModel):
     label: str
     action: str
 
+class ChatRequest(BaseModel):
+    message: str
+
 class ChatResponse(BaseModel):
     response: str
     actions: Optional[List[Action]] = None
 
+
+class IntegrationSummary(BaseModel):
+    id: str
+    name: str
+    status: str
+    source: str
+    target: str
+    last_sync: Optional[str] = None
+    next_sync: Optional[str] = None
+    sync_count: int = 0
+
+
+
+
+
 # THIS IS integration_configs - it stores the REAL connection details
 # https://docs.google.com/spreadsheets/d/1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc/edit?usp=sharing
-integration_configs = {
-    "1": {
-        "name": "Google Sheets → Airtable",
-        "source": {
-            "type": "google_sheets",
-            "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
-            "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",  # Replace with your actual sheet ID
-            "range": "Sheet1"
-        },
-        "target": {
-            "type": "airtable",
-            "api_key": os.getenv("AIRTABLE_API_KEY"),
-            "base_id": "appD0lElNLFW3IMTu",  # Replace with your actual base ID
-            "table": "Projects"
-        },
-        "field_mapping": {
-            "Name": "Name",
-            "Status": "Status",
-            "Due Date": "Deadline"
-        }
-    }
-}
+# integration_configs = {
+#     "1": {
+#         "name": "Google Sheets → Airtable",
+#         "source": {
+#             "type": "google_sheets",
+#             "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
+#             "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",  # Replace with your actual sheet ID
+#             "range": "Sheet1"
+#         },
+#         "target": {
+#             "type": "airtable",
+#             "api_key": os.getenv("AIRTABLE_API_KEY"),
+#             "base_id": "appD0lElNLFW3IMTu",  # Replace with your actual base ID
+#             "table": "Projects"
+#         },
+#         "field_mapping": {
+#             "Name": "Name",
+#             "Status": "Status",
+#             "Due Date": "Deadline"
+#         }
+#     }
+# }
 
-# This is for the dashboard display (can be fetched from DB later)
-integrations_db = [
-    {
-        "id": "1",
-        "name": "Google Sheets → Airtable",
-        "source": "Projects",
-        "target": "Active Projects",
-        "status": "active",
-        "lastSync": "2 min ago",
-        "nextSync": "58 min",
-        "syncCount": 128,
-    },
-]
 
 @app.get("/")
 def root():
@@ -141,10 +232,58 @@ def chat(request: ChatRequest):
 
 
 
-@app.get("/integrations")
-def get_integrations():
+@app.get("/integrations", response_model=List[IntegrationSummary])
+def get_integrations(db: Session = Depends(get_db)) -> list[IntegrationSummary]:
     """Get all integrations"""
-    return integrations_db
+    try:
+        integrations = db.query(Integration).all()
+        if not integrations:
+            logging.info("No integrations found")
+            return []
+
+        integration_ids = [integration.id for integration in integrations]
+        sync_stats = (
+            db.query(
+                SyncLog.integration_id,
+                func.count(SyncLog.id).label("sync_count"),
+                func.max(SyncLog.timestamp).label("last_sync"),
+            )
+            .filter(SyncLog.integration_id.in_(integration_ids))
+            .group_by(SyncLog.integration_id)
+            .all()
+        )
+
+        stats_by_integration_id = {
+            row.integration_id: {
+                "sync_count": int(row.sync_count),
+                "last_sync": row.last_sync.isoformat() if row.last_sync else None,
+            }
+            for row in sync_stats
+        }
+
+        payload: List[IntegrationSummary] = []
+        for integration in integrations:
+            stats = stats_by_integration_id.get(
+                integration.id, {"sync_count": 0, "last_sync": None}
+            )
+            payload.append(
+                IntegrationSummary(
+                    id=integration.id,
+                    name=integration.name,
+                    status=integration.status or "unknown",
+                    source=integration.source_type or "unknown",
+                    target=integration.target_type or "unknown",
+                    last_sync=stats["last_sync"],
+                    next_sync=None,
+                    sync_count=stats["sync_count"],
+                )
+            )
+
+        logging.info("Fetched %s integrations", len(payload))
+        return payload
+    except Exception as e:
+        logging.exception("Failed to fetch integrations: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to fetch integrations")
 
 
 
@@ -196,85 +335,86 @@ load_hashes()
 
 
 
-
 @app.post("/sync/{integration_id}/trigger")
-def trigger_sync(integration_id: str):
-    config = integration_configs.get(integration_id)
-    if not config:
+def trigger_sync(integration_id: str, db: Session = Depends(get_db)):
+    integration = db.query(Integration).filter(Integration.id == integration_id).first()
+    if not integration:
         return {"status": "error", "message": "Integration not found"}
-    # print out the config for debugging
-    logging.info(f"Triggering sync for integration {integration_id}: {config}")
     
     start_time = time.time()
     
     try:
-        engine = SyncEngine(config["source"], config["target"], config["field_mapping"])
+        source_config = integration.source_config.copy()
+        source_config["field_mapping"] = integration.field_mapping
         
-        # restore last hash if exists 
-        if integration_id in sync_hashes:
-            engine.last_sync_hash = sync_hashes[integration_id]
-
-        result = engine.sync(
-            config["source"]["sheet_id"],
-            config["target"]["table"],
-            config["source"].get("range", "Sheet1")
+        engine_sync = SyncEngine(source_config, integration.target_config, integration.field_mapping)
+        
+        # Check hash
+        hash_record = db.query(SyncHash).filter(SyncHash.integration_id == integration_id).first()
+        if hash_record:
+            engine_sync.last_sync_hash = hash_record.last_hash
+        
+        result = engine_sync.sync(
+            integration.source_config["sheet_id"],
+            integration.target_config["table"],
+            integration.source_config.get("range", "Sheet1")
         )
-
-        # save hash if sync was successful
+        
+        # Save hash
         if result.get("status") == "success":
-            sync_hashes[integration_id] = engine.last_sync_hash
-            save_hashes()
+            if hash_record:
+                hash_record.last_hash = engine_sync.last_sync_hash
+                hash_record.updated_at = datetime.utcnow()
+            else:
+                db.add(SyncHash(
+                    integration_id=integration_id,
+                    last_hash=engine_sync.last_sync_hash
+                ))
         
-        # Log metrics
-        sync_metrics.append({
-            "timestamp": datetime.now().isoformat(),
-            "integration_id": integration_id,
-            "duration_ms": (time.time() - start_time) * 1000,
-            "rows_read": result.get("rows_read", 0),
-            "rows_written": result.get("rows_written", 0),
-            "api_calls": 2,
-            "hour_of_day": datetime.now().hour
-        })
-        
-        # Save to file
-        success_flag: bool = save_metrics()
-        if not success_flag:
-            logging.error("Failed to save metrics after sync. Check the logs for details.")
-        else:    
-            logging.info("Metrics saved successfully after sync.")
+        # Log sync
+        db.add(SyncLog(
+            integration_id=integration_id,
+            duration_ms=(time.time() - start_time) * 1000,
+            rows_read=result.get("rows_read", 0),
+            rows_written=result.get("rows_written", 0),
+            api_calls=2,
+            status=result.get("status", "unknown")
+        ))
+        db.commit()
         
         return result
     except Exception as e:
+        db.rollback()
         return {"status": "error", "message": str(e)}
 
 
 
+
+
+
+
+
+
 @app.get("/metrics/sync-history")
-def get_sync_history():
-    """Get sync metrics for visualization"""
+def get_sync_history(db: Session = Depends(get_db)):
+    logs = db.query(SyncLog).order_by(SyncLog.timestamp.desc()).limit(50).all()
     return {
-        "total_syncs": len(sync_metrics),
-        "metrics": sync_metrics[-50:]  # Last 50 syncs
+        "total_syncs": db.query(SyncLog).count(),
+        "metrics": [{"timestamp": log.timestamp.isoformat(), "integration_id": log.integration_id, "rows_written": log.rows_written, "status": log.status} for log in logs]
     }
 
 @app.get("/metrics/efficiency")
-def get_efficiency():
-    """Calculate sync efficiency"""
-    if not sync_metrics:
-        return {"efficiency": 0, "wasted_calls": 0}
+def get_efficiency(db: Session = Depends(get_db)):
+    total = db.query(SyncLog).count()
+    if total == 0:
+        return {"total_syncs": 0, "wasted_syncs": 0, "efficiency": 0}
     
-    total = len(sync_metrics)
-    # Assume syncs with 0 rows written are "wasted"
-    wasted = sum(1 for m in sync_metrics if m["rows_written"] == 0)
-    
+    wasted = db.query(SyncLog).filter(SyncLog.rows_written == 0).count()
     return {
         "total_syncs": total,
         "wasted_syncs": wasted,
-        "efficiency": ((total - wasted) / total) * 100,
-        "api_calls_saved_potential": wasted
+        "efficiency": ((total - wasted) / total * 100)
     }
-
-
 
 
 

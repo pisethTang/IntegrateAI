@@ -76,6 +76,15 @@ const apiUsage = [
 
 const API_URL = "http://localhost:8000";
 
+const formatTimestamp = (value: string | null) => {
+  if (!value) return "Never";
+
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return "Never";
+
+  return timestamp.toLocaleString();
+};
+
 
 
 
@@ -127,7 +136,16 @@ export default function DashboardPage() {
         method: "POST",
       });
       const data = await response.json();
+
+      console.log("Trigger sync response:", data);
+
+      
+      if (!response.ok) {
+        throw new Error(data.error);
+      }
+
       alert(`Sync complete: ${data.rows_written} rows written`);
+      // fetchIntegrations();
       fetchMetrics();
       fetchSyncHistory();
     } catch (error) {
@@ -154,6 +172,7 @@ export default function DashboardPage() {
       await fetch(`${API_URL}/sync/1/trigger`, { method: "POST" });
       await new Promise(r => setTimeout(r, 300));
     }
+    fetchIntegrations();
     fetchMetrics();
     fetchSyncHistory();
     alert("5 test syncs completed!");
@@ -192,13 +211,13 @@ export default function DashboardPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-600">
+                      {/* <p className="text-sm text-gray-600">
                         {integration.source} → {integration.target}
-                      </p>
+                      </p> */}
                       <div className="mt-3 space-y-1 text-xs text-gray-500">
-                        <p>Last sync: {integration.lastSync}</p>
-                        <p>Next sync: {integration.nextSync}</p>
-                        <p>Total syncs: {integration.syncCount}</p>
+                        <p>Last sync: {formatTimestamp(integration.last_sync)}</p>
+                        <p>Next sync: {integration.next_sync ?? "On demand"}</p>
+                        <p>Total syncs: {integration.sync_count}</p>
                       </div>
                       <div className="mt-4 flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => triggerSync(integration.id)}>

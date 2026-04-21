@@ -1,17 +1,19 @@
 import os
-import google.generativeai as genai
-from typing import List, Dict
+from typing import List, Dict, Optional
+
+from google import genai
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
 class IntegrationAI:
     def __init__(self):
-        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-        self.model = genai.GenerativeModel(model_name)
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.client = None
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
         
         self.system_prompt = """You are an AI assistant for IntegrateAI, a data integration platform.
 Your job is to help users connect systems and sync data.
@@ -28,20 +30,25 @@ When a user wants to connect systems:
 
 Respond conversationally and offer specific actions the user can take."""
     
-    def chat(self, message: str, history: List[Dict] = None) -> Dict:
+    def chat(self, message: str, history: Optional[List[Dict]] = None) -> Dict:
         """Process user message and return AI response with actions"""
-        if not os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
             raise RuntimeError("GEMINI_API_KEY is missing. Add it to backend/.env")
-        
-        # Build conversation
-        chat = self.model.start_chat(history=[])
-        
-        # Add system context
-        chat.send_message(self.system_prompt)
-        
-        # Get response
-        response = chat.send_message(message)
-        ai_text = response.text
+
+        if self.client is None:
+            self.client = genai.Client(api_key=api_key)
+
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=message,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=self.system_prompt,
+            ),
+        )
+        ai_text = (response.text or "").strip()
+        if not ai_text:
+            raise RuntimeError("Gemini returned an empty response")
         
         # Extract actions from response (simple parsing)
         actions = self._extract_actions(ai_text)

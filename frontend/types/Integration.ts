@@ -1,10 +1,10 @@
 export type Integration = {
   id: string;
   name: string;
+  status: string;
   source: string;
   target: string;
-  status: string;
-  lastSync: string;
-  nextSync: string;
-  syncCount: number;
+  last_sync: string | null;
+  next_sync: string | null;
+  sync_count: number;
 };

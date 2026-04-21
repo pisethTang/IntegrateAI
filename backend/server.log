@@ -1,0 +1,144 @@
+nohup: ignoring input
+INFO:     Started server process [141258]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:52076 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    engine_sync = SyncEngine(source_config, target_config, field_mapping)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if config["type"] == "google_sheets":
+       ~~~~~~^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:52082 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:52098 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:59326 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:59338 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:53644 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:53656 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:53672 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:53682 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:47540 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:47550 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:47556 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:47562 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:47568 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+    target_table = target_config.get("table")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:47572 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:47580 - "GET /integrations HTTP/1.1" 200 OK
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:47576 - "GET /integrations HTTP/1.1" 200 OK
+ERROR:root:Failed to trigger sync for integration 1: 'type'
+Traceback (most recent call last):
+  File "/home/sething2002/IntegrateAI/backend/main.py", line 356, in trigger_sync
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 25, in __init__
+    self.source = self._create_connector(source_config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sething2002/IntegrateAI/backend/sync_engine.py", line 34, in _create_connector
+    if (config.get('type') or 'google_sheets') == 'google_sheets':
+       ^^^^^^^^^^^^^^
+KeyError: 'type'
+INFO:     127.0.0.1:51454 - "POST /sync/1/trigger HTTP/1.1" 500 Internal Server Error
+INFO:root:Fetched 1 integrations
+INFO:     127.0.0.1:51462 - "GET /integrations HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [141258]

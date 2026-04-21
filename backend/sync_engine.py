@@ -31,11 +31,11 @@ class SyncEngine:
 
     
     def _create_connector(self, config: Dict):
-        if config["type"] == "google_sheets":
+        if (config.get('type') or 'google_sheets') == 'google_sheets':
             return GoogleSheetsConnector(config["api_key"])
-        elif config["type"] == "airtable":
+        elif (config.get("type") or "airtable") == "airtable":
             return AirtableConnector(config["api_key"], config["base_id"])
-        raise ValueError(f"Unknown connector type: {config['type']}")
+        raise ValueError(f"Unknown connector type: {config.get("type")}")
     
     def compute_hash(self, data: List[Dict]) -> str:
         """Compute a hash of the data for change detection"""
