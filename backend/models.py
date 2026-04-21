@@ -5,6 +5,9 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 
+from sqlalchemy.sql import func
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
@@ -39,7 +42,7 @@ class SyncLog(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     integration_id = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime(timezone=True), default=func.now())
     duration_ms = Column(Float)
     rows_read = Column(Integer)
     rows_written = Column(Integer)

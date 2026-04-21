@@ -76,13 +76,14 @@ const apiUsage = [
 
 const API_URL = "http://localhost:8000";
 
-const formatTimestamp = (value: string | null) => {
-  if (!value) return "Never";
-
-  const timestamp = new Date(value);
-  if (Number.isNaN(timestamp.getTime())) return "Never";
-
-  return timestamp.toLocaleString();
+const formatTimestamp = (timestamp: string | null) => {
+  if (!timestamp) return "Never";
+  return new Date(timestamp).toLocaleString("en-AU", {
+    timeZone: "Australia/Adelaide",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  
 };
 
 

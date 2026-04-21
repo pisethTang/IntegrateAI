@@ -344,10 +344,15 @@ def trigger_sync(integration_id: str, db: Session = Depends(get_db)):
     start_time = time.time()
     
     try:
+        # Build source config with type from model
         source_config = integration.source_config.copy()
-        source_config["field_mapping"] = integration.field_mapping
+        source_config["type"] = integration.source_type  # <-- USE THIS!
         
-        engine_sync = SyncEngine(source_config, integration.target_config, integration.field_mapping)
+        # Build target config with type from model
+        target_config = integration.target_config.copy()
+        target_config["type"] = integration.target_type  # <-- USE THIS!
+        
+        engine_sync = SyncEngine(source_config, target_config, integration.field_mapping)
         
         # Check hash
         hash_record = db.query(SyncHash).filter(SyncHash.integration_id == integration_id).first()
@@ -400,7 +405,16 @@ def get_sync_history(db: Session = Depends(get_db)):
     logs = db.query(SyncLog).order_by(SyncLog.timestamp.desc()).limit(50).all()
     return {
         "total_syncs": db.query(SyncLog).count(),
-        "metrics": [{"timestamp": log.timestamp.isoformat(), "integration_id": log.integration_id, "rows_written": log.rows_written, "status": log.status} for log in logs]
+        "metrics": [
+            {
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None, 
+                "integration_id": log.integration_id, 
+                "rows_written": log.rows_written, 
+                "status": log.status
+            } 
+            
+            for log in logs
+            ]
     }
 
 @app.get("/metrics/efficiency")
