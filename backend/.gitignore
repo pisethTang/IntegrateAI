@@ -1,4 +1,4 @@
-# all cache files 
-/**/__pycache__**/
+# Ignore any Python bytecode cache directory anywhere under backend/
+__pycache__/
 .venv/
 .env*
