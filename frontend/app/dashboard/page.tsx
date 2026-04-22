@@ -26,29 +26,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Mock data
-// const integrations = [
-//   {
-//     id: "1",
-//     name: "Smartsheet → Airtable",
-//     source: "Projects",
-//     target: "Active Projects",
-//     status: "active",
-//     lastSync: "2 min ago",
-//     nextSync: "58 min",
-//     syncCount: 128,
-//   },
-//   {
-//     id: "2",
-//     name: "PostgreSQL → S3",
-//     source: "analytics",
-//     target: "s3://integrateai-bucket/",
-//     status: "paused",
-//     lastSync: "1 hour ago",
-//     nextSync: "23 hours",
-//     syncCount: 45,
-//   },
-// ];
 
 const syncData = [
   { day: "Mon", syncs: 12 },
@@ -66,15 +43,8 @@ const apiUsage = [
   { name: "PostgreSQL", used: 1200, limit: 10000 },
 ];
 
-// const recentSyncs = [
-//   { id: "1", integration: "Smartsheet → Airtable", time: "2 min ago", rows: 45, status: "success" },
-//   { id: "2", integration: "PostgreSQL → S3", time: "1 hour ago", size: "1.2 MB", status: "success" },
-//   { id: "3", integration: "Smartsheet → Airtable", time: "3 hours ago", rows: 23, status: "error" },
-// ];
 
-
-
-const API_URL = "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const formatTimestamp = (timestamp: string | null) => {
   if (!timestamp) return "Never";
@@ -158,6 +128,7 @@ export default function DashboardPage() {
     try {
       const response = await fetch(`${API_URL}/integrations`);
       const data = await response.json();
+      console.log("Fetched integrations:", data);
       setIntegrations(data);
     } catch (error) {
       console.error("Failed to fetch integrations:", error);
@@ -201,7 +172,10 @@ export default function DashboardPage() {
               <p>Loading...</p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {integrations.map((integration) => (
+                {integrations.map(
+                  
+                  (integration) => (
+
                   <Card key={integration.id}>
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -235,7 +209,12 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+
+
+                )
+                
+                
+                )}
               </div>
             )}
           </section>

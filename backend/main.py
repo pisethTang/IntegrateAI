@@ -135,7 +135,7 @@ async def lifespan(app: FastAPI):
     
     yield  # App runs here
     
-    # Shutdown code (optional)
+    # Shutdown code (oPtional)
     print("Shutting down...")
 
 
@@ -509,6 +509,10 @@ def train_rl_optimizer():
     result = rl_optimizer.train(total_timesteps=given_total_timesteps)
     return result
 
+
+
+
+
 @app.get("/rl/status")
 def get_rl_status():
     """Check if RL model is trained"""
@@ -516,6 +520,9 @@ def get_rl_status():
         "is_trained": rl_optimizer.is_trained,
         "model_loaded": os.path.exists("rl_model.zip")
     }
+
+
+
 
 @app.post("/rl/should-sync")
 def should_sync_rl(hours_since_sync: int):

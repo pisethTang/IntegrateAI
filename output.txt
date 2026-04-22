@@ -1,1 +1,0 @@
-ql postgresql://seth:seth12345@localhost:5432/integrateai -c SELECT\ id\,\ name\,\ status\,\ source_type\,\ target_type\,\ created_at\ FROM\ integrations\;
