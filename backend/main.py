@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, List, Optional
 import os 
 import logging
 
@@ -43,12 +43,27 @@ def _build_allowed_origins() -> list[str]:
 from sync_engine import SyncEngine
 
 
-# Import the RL optimizer
-from rl_optimizer import SyncOptimizer
+_rl_optimizer: Any | None = None
+_rl_optimizer_error: Exception | None = None
 
 
-# Initialize RL optimizer
-rl_optimizer = SyncOptimizer()
+def get_rl_optimizer():
+    global _rl_optimizer, _rl_optimizer_error
+
+    if _rl_optimizer is not None:
+        return _rl_optimizer
+
+    if _rl_optimizer_error is not None:
+        raise RuntimeError("RL optimizer dependencies are unavailable") from _rl_optimizer_error
+
+    try:
+        from rl_optimizer import SyncOptimizer
+
+        _rl_optimizer = SyncOptimizer()
+        return _rl_optimizer
+    except Exception as exc:
+        _rl_optimizer_error = exc
+        raise RuntimeError("RL optimizer dependencies are unavailable") from exc
 
 
 
@@ -450,8 +465,9 @@ def get_change_probability(hour: int, minute: int) -> float:
 @app.post("/rl/train")
 def train_rl_optimizer():
     """Train the RL sync optimizer"""
+    optimizer = get_rl_optimizer()
     given_total_timesteps = 20000
-    result = rl_optimizer.train(total_timesteps=given_total_timesteps)
+    result = optimizer.train(total_timesteps=given_total_timesteps)
     return result
 
 
@@ -461,8 +477,19 @@ def train_rl_optimizer():
 @app.get("/rl/status")
 def get_rl_status():
     """Check if RL model is trained"""
+    try:
+        optimizer = get_rl_optimizer()
+    except RuntimeError as exc:
+        return {
+            "available": False,
+            "is_trained": False,
+            "model_loaded": False,
+            "error": str(exc),
+        }
+
     return {
-        "is_trained": rl_optimizer.is_trained,
+        "available": True,
+        "is_trained": optimizer.is_trained,
         "model_loaded": os.path.exists("rl_model.zip")
     }
 
@@ -472,6 +499,7 @@ def get_rl_status():
 @app.post("/rl/should-sync")
 def should_sync_rl(hours_since_sync: int):
     """Ask RL agent if we should sync now"""
+    optimizer = get_rl_optimizer()
     state = {
         "hour_of_day": datetime.now().hour,
         "day_of_week": datetime.now().weekday(),
@@ -480,18 +508,20 @@ def should_sync_rl(hours_since_sync: int):
         "data_change_score": 50  # Default
     }
     
-    should = rl_optimizer.should_sync(state)
+    should = optimizer.should_sync(state)
     return {"should_sync": should, "state": state}
 
 @app.get("/rl/evaluate")
 def evaluate_rl():
     """Compare RL vs fixed schedule"""
-    if not rl_optimizer.is_trained:
+    optimizer = get_rl_optimizer()
+
+    if not optimizer.is_trained:
         # Try to load existing model
-        if not rl_optimizer.load():
+        if not optimizer.load():
             return {"error": "No trained model. Train first with POST /rl/train"}
     
-    return rl_optimizer.evaluate(episodes=10)
+    return optimizer.evaluate(episodes=10)
 
 
 
