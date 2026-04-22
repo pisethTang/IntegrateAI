@@ -27,10 +27,20 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
+def _build_allowed_origins() -> list[str]:
+    origins = {"http://localhost:3000"}
+    configured_origins = os.getenv("FRONTEND_URL", "")
+
+    for origin in configured_origins.split(","):
+        normalized_origin = origin.strip().rstrip("/")
+        if normalized_origin:
+            origins.add(normalized_origin)
+
+    return sorted(origins)
+
 
 # Import the sync engine
 from sync_engine import SyncEngine
-
 
 
 # Import the RL optimizer
@@ -49,13 +59,6 @@ from ai_agent import IntegrationAI
 ai_agent = IntegrationAI()
 
 
-#######################################################################################
-
-
-# Store sync metrics (in production, use database)
-# sync_metrics = []
-
-
 
 
 
@@ -72,36 +75,6 @@ def get_db_session():
 
 
 
-# Create tables on startup
-# @app.on_event("startup")
-# def startup():
-    # Base.metadata.create_all(bind=engine)
-    
-    # # Seed default integration if none exists
-    # db = get_db_session()
-    # existing = db.query(Integration).filter(Integration.id == "1").first()
-    # if not existing:
-    #     default = Integration(
-    #         id="1",
-    #         name="Google Sheets → Airtable",
-    #         source_type="google_sheets",
-    #         source_config={
-    #             "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
-    #             "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",
-    #             "range": "Sheet1"
-    #         },
-    #         target_type="airtable",
-    #         target_config={
-    #             "api_key": os.getenv("AIRTABLE_API_KEY"),
-    #             "base_id": "appD0lElNLFW3IMTu",
-    #             "table": "Projects"
-    #         },
-    #         field_mapping={"Name": "Name", "Status": "Status", "Due Date": "Deadline"}
-    #     )
-    #     db.add(default)
-    #     db.commit()
-    # db.close()
-########################################################################################
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -144,9 +117,7 @@ app = FastAPI(title="IntegrateAI API", lifespan=lifespan) # lifespan allows us t
 # Allow frontend to connect
 app.add_middleware(
     CORSMiddleware,
-
-
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_build_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -181,32 +152,6 @@ class IntegrationSummary(BaseModel):
 
 
 
-
-
-# THIS IS integration_configs - it stores the REAL connection details
-# https://docs.google.com/spreadsheets/d/1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc/edit?usp=sharing
-# integration_configs = {
-#     "1": {
-#         "name": "Google Sheets → Airtable",
-#         "source": {
-#             "type": "google_sheets",
-#             "api_key": os.getenv("GOOGLE_SHEETS_API_KEY"),
-#             "sheet_id": "1mvOI4i6ekfQv5nBzKAropDMTQ1jUCAEKwiLM_JrjNxc",  # Replace with your actual sheet ID
-#             "range": "Sheet1"
-#         },
-#         "target": {
-#             "type": "airtable",
-#             "api_key": os.getenv("AIRTABLE_API_KEY"),
-#             "base_id": "appD0lElNLFW3IMTu",  # Replace with your actual base ID
-#             "table": "Projects"
-#         },
-#         "field_mapping": {
-#             "Name": "Name",
-#             "Status": "Status",
-#             "Due Date": "Deadline"
-#         }
-#     }
-# }
 
 
 @app.get("/")
