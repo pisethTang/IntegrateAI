@@ -10,10 +10,10 @@ import { Loader2, Send } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Sidebar from "../components/Sidebar";
+import { API_URL } from "@/lib/api-url";
 
 import Message from "../types/Message";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+console.log("Using API URL in chat page:", API_URL);
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -31,6 +31,25 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+
+  const [backendReady, setBackendReady] = useState(false);
+
+  useEffect(() => {
+    // Ping backend until it's awake
+    const wakeUp = async () => {
+      try {
+        const res = await fetch(`${API_URL}/`, {
+          signal: AbortSignal.timeout(5000) 
+        });
+        if (res.ok) setBackendReady(true);
+      } catch {
+        // Retry in 3 seconds
+        setTimeout(wakeUp, 3000);
+      }
+    };
+    wakeUp();
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -150,6 +169,17 @@ export default function ChatPage() {
   };
 
   return (
+    <>
+  { !backendReady ? (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto" />
+          <p className="text-gray-600">Waking up backend... (10-15s)</p>
+        </div>
+      </div>
+    ) :
+  
+  (
     <div className="flex h-screen bg-gray-50">
       <Sidebar onNewChat={handleNewChat} />
 
@@ -243,5 +273,11 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
-  );
+  )}
+  </>
+
+  )
+
+
+
 }

@@ -25,6 +25,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { API_URL } from "@/lib/api-url";
+
+
+
 
 
 const syncData = [
@@ -37,6 +41,9 @@ const syncData = [
   { day: "Sun", syncs: 10 },
 ];
 
+
+
+
 const apiUsage = [
   { name: "Smartsheet", used: 234, limit: 500 },
   { name: "Airtable", used: 89, limit: 1000 },
@@ -44,7 +51,11 @@ const apiUsage = [
 ];
 
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+
+console.log("Using API URL in dashboard page:", API_URL);
+
+
 
 const formatTimestamp = (timestamp: string | null) => {
   if (!timestamp) return "Never";
@@ -65,6 +76,8 @@ export default function DashboardPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [recentSyncs, setRecentSyncs] = useState([]);
+  const [perf, setPerf] = useState({ avg_latency_ms: 0, p95_latency_ms: 0, requests: 0 });
+
 
 
   const [metrics, setMetrics] = useState({
@@ -78,6 +91,7 @@ export default function DashboardPage() {
     fetchIntegrations();
     fetchMetrics();
     fetchSyncHistory();
+    fetchPerformance();
   }, []);
 
 
@@ -101,6 +115,17 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchPerformance = async () => {
+  try {
+    console.log("Fetching performance metrics...");
+    const response = await fetch(`${API_URL}/metrics/performance`);
+    const data = await response.json();
+    setPerf(data);
+  } catch (error) {
+    console.error("Failed to fetch performance:", error);
+  }
+};
+
   const triggerSync = async (integrationId: string) => {
     try {
       const response = await fetch(`${API_URL}/sync/${integrationId}/trigger`, {
@@ -116,13 +141,15 @@ export default function DashboardPage() {
       }
 
       alert(`Sync complete: ${data.rows_written} rows written`);
-      // fetchIntegrations();
+
       fetchMetrics();
       fetchSyncHistory();
+      fetchPerformance(); 
     } catch (error) {
       alert("Failed to trigger sync");
     }
   };
+
 
   const fetchIntegrations = async () => {
     try {
@@ -147,6 +174,7 @@ export default function DashboardPage() {
     fetchIntegrations();
     fetchMetrics();
     fetchSyncHistory();
+    fetchPerformance();  
     alert("5 test syncs completed!");
   };
 
@@ -220,7 +248,7 @@ export default function DashboardPage() {
           </section>
 
           {/* Charts Row */}
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:grid-cols-4">
             {/* Sync Activity */}
             <Card>
               <CardHeader>
@@ -285,6 +313,27 @@ export default function DashboardPage() {
                   <Button size="sm" variant="outline">
                     Train RL Agent
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">API Performance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Avg Latency</span>
+                  <span className="font-semibold">{perf.avg_latency_ms}ms</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>P95 Latency</span>
+                  <span className="font-semibold">{perf.p95_latency_ms}ms</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Requests</span>
+                  <span className="font-semibold">{perf.requests}</span>
                 </div>
               </CardContent>
             </Card>

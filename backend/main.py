@@ -1,7 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Any, List, Optional
+from typing import Any, Dict, List
 import os 
 import logging
 
@@ -17,6 +16,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from mcp_server import mcp_server
 from models import SessionLocal, get_db, Integration, SyncLog, SyncHash, engine, Base
 from fastapi import Depends
 
@@ -41,6 +41,7 @@ def _build_allowed_origins() -> list[str]:
 
 # Import the sync engine
 from sync_engine import SyncEngine
+from schemas import Action, ChatRequest, ChatResponse, IntegrationSummary
 
 
 _rl_optimizer: Any | None = None
@@ -87,6 +88,10 @@ logging.basicConfig(level=logging.INFO)
 
 def get_db_session():
     return SessionLocal()
+
+
+
+
 
 
 
@@ -138,34 +143,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import types Request/Response models
-# from backend.types.ChatRequest import ChatRequest
-# from backend.types.ChatResponse import ChatResponse
-# from backend.types.Action import Action
 
-class Action(BaseModel):
-    label: str
-    action: str
+benchmark_buffer = []
 
-class ChatRequest(BaseModel):
-    message: str
+@app.middleware("http")
+async def benchmark_middleware(request: Request, call_next):
+    """Automatically time every API request and log slow ones"""
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start) * 1000
+    
+    # Store in a simple in-memory ring buffer (last 100 requests)
+    benchmark_buffer.append({
+        "path": request.url.path,
+        "method": request.method,
+        "duration_ms": round(duration_ms, 2),
+        "timestamp": datetime.now().isoformat(),
+        "status_code": response.status_code
+    })
+    if len(benchmark_buffer) > 100:
+        benchmark_buffer.pop(0)
+    
+    # Log slow requests (> 1 second)
+    if duration_ms > 1000:
+        logging.warning(f"SLOW REQUEST: {request.method} {request.url.path} took {duration_ms:.0f}ms")
+    
+    # Add header so frontend can read it
+    response.headers["X-Response-Time-Ms"] = str(round(duration_ms, 2))
+    return response
 
-class ChatResponse(BaseModel):
-    response: str
-    actions: Optional[List[Action]] = None
 
 
-class IntegrationSummary(BaseModel):
-    id: str
-    name: str
-    status: str
-    source: str
-    target: str
-    last_sync: Optional[str] = None
-    next_sync: Optional[str] = None
-    sync_count: int = 0
-
-
+@app.get("/metrics/performance")
+def get_performance_metrics():
+    """Get API performance statistics"""
+    if not benchmark_buffer:
+        return {"requests": 0, "avg_latency_ms": 0, "p95_latency_ms": 0, "slow_requests": 0}
+    
+    durations = [r["duration_ms"] for r in benchmark_buffer]
+    durations_sorted = sorted(durations)
+    
+    return {
+        "requests": len(durations),
+        "avg_latency_ms": round(sum(durations) / len(durations), 2),
+        "p95_latency_ms": round(durations_sorted[int(len(durations_sorted) * 0.95)], 2),
+        "max_latency_ms": round(max(durations), 2),
+        "min_latency_ms": round(min(durations), 2),
+        "slow_requests": sum(1 for d in durations if d > 1000),
+        "endpoints": {
+            path: {
+                "avg": round(sum(r["duration_ms"] for r in benchmark_buffer if r["path"] == path) / 
+                            sum(1 for r in benchmark_buffer if r["path"] == path), 2),
+                "count": sum(1 for r in benchmark_buffer if r["path"] == path)
+            }
+            for path in set(r["path"] for r in benchmark_buffer)
+        }
+    }
 
 
 
@@ -522,6 +555,20 @@ def evaluate_rl():
             return {"error": "No trained model. Train first with POST /rl/train"}
     
     return optimizer.evaluate(episodes=10)
+
+
+
+# mcp endpoints
+
+@app.get("/mcp/tools")
+def list_mcp_tools():
+    """List available tools via MCP protocol"""
+    return mcp_server.list_tools()
+
+@app.post("/mcp/call")
+def call_mcp_tool(tool_name: str, params: Dict = {}):
+    """Execute an MCP tool"""
+    return mcp_server.call_tool(tool_name, params)
 
 
 
